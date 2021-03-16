@@ -5,8 +5,8 @@ const io = require("socket.io")(http);
 const dotenv = require('dotenv');
 dotenv.config();
 
-const port = process.env.APP_PORT;
-const host = process.env.APP_HOST;
+const port = process.env.PORT;
+const host = process.env.HOST;
 
 const crypto = require("crypto");
 const randomId = () => crypto.randomBytes(8).toString("hex");
