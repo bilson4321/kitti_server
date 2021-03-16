@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <style>
+      body {
+        margin: 0;
+        padding-bottom: 3rem;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+      }
+
+      #form {
+        background: rgba(0, 0, 0, 0.15);
+        padding: 0.25rem;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        height: 3rem;
+        box-sizing: border-box;
+        backdrop-filter: blur(10px);
+      }
+      #input {
+        border: none;
+        padding: 0 1rem;
+        flex-grow: 1;
+        border-radius: 2rem;
+        margin: 0.25rem;
+      }
+      #input:focus {
+        outline: none;
+      }
+      #form > button {
+        background: #333;
+        border: none;
+        padding: 0 1rem;
+        margin: 0.25rem;
+        border-radius: 3px;
+        outline: none;
+        color: #fff;
+      }
+
+      #messages {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+      }
+      #messages > li {
+        padding: 0.5rem 1rem;
+      }
+      #messages > li:nth-child(odd) {
+        background: #efefef;
+      }
+    </style>
+  </head>
+  <body>
+    <input id="username" />
+    <button onclick="connectServer()">Game Start</button>
+    <hr />
+    <button onclick="createRoom()">Start new room</button>
+    <input id="othersGameRoomId" />
+    <button onclick="joinRoom()">Join Room</button>
+    <ul id="playersInRoom"></ul>
+    <hr />
+    <button onclick="showConnectedRooms()">Show connected rooms</button>
+    <ul id="cards"></ul>
+    <form id="form" action="">
+      <input id="input" autocomplete="off" /><button>Send</button>
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const URL = "http://localhost:3000";
+      var socket = io(URL, { autoConnect: false });
+      var username = document.getElementById("username");
+      var othersGameRoomId = document.getElementById("othersGameRoomId");
+      var playersInRoom = document.getElementById("playersInRoom");
+      var cardsSlot = document.getElementById("cards");
+
+
+      function connectServer() {
+        const sessionID = localStorage.getItem("sessionID");
+        console.log("pressed");
+        if (sessionID) {
+          socket.auth = { sessionID };
+          socket.connect();
+        } else {
+          socket.auth = { username: username.value };
+          socket.connect();
+        }
+      }
+
+      function createRoom() {
+        console.log("room create pressed");
+        socket.emit("create_game_room", "Test");
+      }
+
+      function showConnectedRooms() {
+        socket.emit("distribute_cards", othersGameRoomId.value);
+      }
+
+      function joinRoom() {
+        socket.emit("join_game_room", othersGameRoomId.value);
+      }
+
+      socket.on("session", ({ sessionID, userID }) => {
+        socket.auth = { sessionID };
+        localStorage.setItem("sessionID", sessionID);
+        socket.userID = userID;
+      });
+      socket.on("game_room_players", (players) => {
+        players.forEach(function (client) {
+          var item = document.createElement("li");
+          item.textContent = client.username;
+          playersInRoom.appendChild(item);
+        });
+      });
+
+      socket.on("cards_to_play",(cards)=>{
+        cards.forEach(function (card) {
+          var item = document.createElement("li");
+          item.textContent = card.cardValue + card.cardNumber + card.cardType;
+          cardsSlot.appendChild(item);
+        });
+      })
+      socket.onAny((event, ...args) => {
+        console.log(event, args);
+      });
+
+      socket.on("connect_error", (err) => {
+        console.log("Error caught" + err);
+      });
+    </script>
+  </body>
+</html>
